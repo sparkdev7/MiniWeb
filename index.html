@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MiniWeb - Code your favourite apps in a light-weight and open source web page.</title>
+<style>
+  body {
+    margin: 0; height: 100vh; display: flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #ccc;
+  }
+  #sidebar {
+    width: 300px; background: #252526; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column;
+  }
+  #searchBar {
+    margin-bottom: 10px; padding: 6px 8px; font-size: 14px; border-radius: 4px; border: none; outline: none;
+    background: #3c3c3c; color: #ccc;
+  }
+  #explorer {
+    flex-grow: 1; overflow-y: auto; background: #1e1e1e; border-radius: 4px; padding: 6px;
+  }
+  .folder, .file {
+    padding: 5px 8px; cursor: pointer; user-select: none; border-radius: 3px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .folder:hover, .file:hover {
+    background: #333;
+  }
+  .folder > .name::before {
+    content: "📁 "; 
+  }
+  .file > .name::before {
+    content: "📄 ";
+  }
+  .expanded > .children {
+    display: block;
+    margin-left: 16px;
+  }
+  .children {
+    display: none;
+  }
+  button {
+    margin: 4px 0; padding: 6px 12px; border: none; border-radius: 3px; background: #0e639c; color: white; cursor: pointer;
+    user-select: none;
+  }
+  button:hover {
+    background: #1177d1;
+  }
+  #editor {
+    flex-grow: 1;
+  }
+  .btn-small {
+    font-size: 12px; padding: 2px 6px; margin-left: 5px; background: #444; border-radius: 3px;
+    color: #ccc; cursor: pointer;
+    user-select: none;
+  }
+  .btn-small:hover {
+    background: #666;
+  }
+  .node-controls {
+    display: flex;
+    gap: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <input type="text" id="searchBar" placeholder="Search for files..." autocomplete="off" />
+  <button id="btnNewFile">New file (Ctrl+N)</button>
+  <button id="btnNewFolder">New Folder</button>
+  <button id="btnDownloadProject">Download Project</button>
+  <div id="explorer" tabindex="0" aria-label="Explorador de archivos"></div>
+</div>
+
+<div id="editor" aria-label="Code editor"></div>
+
+<script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
