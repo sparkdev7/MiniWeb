@@ -1,80 +1,265 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MiniWeb - Code your favourite apps in a light-weight and open source web page.</title>
+<title>MiniWeb - Code your favourite apps</title>
 <style>
   body {
-    margin: 0; height: 100vh; display: flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #ccc;
+    font-family: Arial, sans-serif;
+    background: #1e1e1e;
+    color: #ddd;
+    margin: 0; padding: 0;
+    display: flex;
+    height: 100vh;
+  }
+  header {
+    background: #007acc;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 20px;
+    color: white;
+    flex-shrink: 0;
   }
   #sidebar {
-    width: 300px; background: #252526; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column;
+    width: 250px;
+    background: #252526;
+    padding: 10px;
+    border-right: 1px solid #444;
+    display: flex;
+    flex-direction: column;
   }
-  #searchBar {
-    margin-bottom: 10px; padding: 6px 8px; font-size: 14px; border-radius: 4px; border: none; outline: none;
-    background: #3c3c3c; color: #ccc;
+  #fileList {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
   }
-  #explorer {
-    flex-grow: 1; overflow-y: auto; background: #1e1e1e; border-radius: 4px; padding: 6px;
+  .file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0;
   }
-  .folder, .file {
-    padding: 5px 8px; cursor: pointer; user-select: none; border-radius: 3px; display: flex; align-items: center; justify-content: space-between;
+  .file-item button.file-btn {
+    flex-grow: 1;
+    background: #0e639c;
+    border: none;
+    color: white;
+    padding: 8px;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 3px;
+    font-weight: bold;
+    margin-right: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
-  .folder:hover, .file:hover {
-    background: #333;
-  }
-  .folder > .name::before {
-    content: "📁 "; 
-  }
-  .file > .name::before {
-    content: "📄 ";
-  }
-  .expanded > .children {
-    display: block;
-    margin-left: 16px;
-  }
-  .children {
-    display: none;
-  }
-  button {
-    margin: 4px 0; padding: 6px 12px; border: none; border-radius: 3px; background: #0e639c; color: white; cursor: pointer;
-    user-select: none;
-  }
-  button:hover {
+  .file-item button.file-btn:hover {
     background: #1177d1;
+  }
+  .file-item button.file-btn.active {
+    background: #005a9e;
+  }
+  .file-item button.delete-btn {
+    background: #c0392b;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-weight: bold;
+  }
+  .file-item button.delete-btn:hover {
+    background: #e74c3c;
+  }
+  #mainArea {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
   }
   #editor {
     flex-grow: 1;
+    width: 100%;
+    background: #1e1e1e;
+    color: #fff;
+    font-family: monospace;
+    font-size: 16px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 10px;
+    resize: none;
   }
-  .btn-small {
-    font-size: 12px; padding: 2px 6px; margin-left: 5px; background: #444; border-radius: 3px;
-    color: #ccc; cursor: pointer;
-    user-select: none;
-  }
-  .btn-small:hover {
-    background: #666;
-  }
-  .node-controls {
+  #controls {
+    margin-top: 10px;
     display: flex;
-    gap: 4px;
+    gap: 10px;
+    align-items: center;
+  }
+  button {
+    background: #0e639c;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+  button:hover {
+    background: #1177d1;
   }
 </style>
 </head>
 <body>
 
 <div id="sidebar">
-  <input type="text" id="searchBar" placeholder="Search for files..." autocomplete="off" />
-  <button id="btnNewFile">New file (Ctrl+N)</button>
-  <button id="btnNewFolder">New Folder</button>
-  <button id="btnDownloadProject">Download Project</button>
-  <div id="explorer" tabindex="0" aria-label="Explorador de archivos"></div>
+  <header>MiniWeb - Files</header>
+  <div id="fileList"></div>
+  <button id="btnNewFile" style="margin-top:8px;">New File</button>
 </div>
 
-<div id="editor" aria-label="Code editor"></div>
+<div id="mainArea">
+  <header>MiniWeb - Code your favourite apps in a lightweight and open-source editor.</header>
+  <textarea id="editor" placeholder="Type your code here..."></textarea>
+  <div id="controls">
+    <button id="btnSaveFile">Save File</button>
+    <button id="btnDownloadFile">Download File</button>
+    <button id="btnDownloadAll">Download Project</button>
+  </div>
+</div>
 
-<script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
-<script src="app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+  let files = {};
+  let currentFile = null;
+
+  const fileListEl = document.getElementById('fileList');
+  const editor = document.getElementById('editor');
+  const btnNewFile = document.getElementById('btnNewFile');
+  const btnSaveFile = document.getElementById('btnSaveFile');
+  const btnDownloadFile = document.getElementById('btnDownloadFile');
+  const btnDownloadAll = document.getElementById('btnDownloadAll');
+
+  btnNewFile.onclick = () => {
+    let fileName = prompt("Enter new file name with extension (e.g. script.js):");
+    if (!fileName) {
+      alert("File creation canceled.");
+      return;
+    }
+    fileName = fileName.trim();
+    if (fileName === "") {
+      alert("File name cannot be empty.");
+      return;
+    }
+    if (!fileName.match(/^[a-zA-Z0-9_\-.]+$/)) {
+      alert("File name can only contain letters, numbers, _, - and .");
+      return;
+    }
+    if (files[fileName]) {
+      alert("File already exists. Choose a different name.");
+      return;
+    }
+    files[fileName] = '';
+    currentFile = fileName;
+    editor.value = '';
+    renderFileList();
+    alert('New file created: ' + fileName);
+  };
+
+  btnSaveFile.onclick = () => {
+    if (!currentFile) {
+      alert('No file open to save');
+      return;
+    }
+    files[currentFile] = editor.value;
+    renderFileList();
+    alert('File saved: ' + currentFile);
+  };
+
+  btnDownloadFile.onclick = () => {
+    if (!currentFile) {
+      alert('No file open to download');
+      return;
+    }
+    downloadFile(currentFile, files[currentFile]);
+  };
+
+  btnDownloadAll.onclick = () => {
+    if (Object.keys(files).length === 0) {
+      alert('No files to download');
+      return;
+    }
+    downloadZip(files);
+  };
+
+  function renderFileList() {
+    fileListEl.innerHTML = '';
+    Object.keys(files).forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+
+      const btn = document.createElement('button');
+      btn.textContent = f;
+      btn.className = 'file-btn';
+      if (f === currentFile) btn.classList.add('active');
+      btn.onclick = () => {
+        currentFile = f;
+        editor.value = files[f];
+        renderFileList();
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'X';
+      delBtn.className = 'delete-btn';
+      delBtn.title = 'Delete file';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete file "${f}"? This action cannot be undone.`)) {
+          delete files[f];
+          if (currentFile === f) {
+            currentFile = null;
+            editor.value = '';
+          }
+          renderFileList();
+        }
+      };
+
+      div.appendChild(btn);
+      div.appendChild(delBtn);
+      fileListEl.appendChild(div);
+    });
+  }
+
+  function downloadFile(filename, content) {
+    const blob = new Blob([content], {type: 'text/plain'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function downloadZip(files) {
+    if (!window.JSZip) {
+      alert('JSZip not loaded, can\'t download all files.');
+      return;
+    }
+    const zip = new JSZip();
+    for (const [name, content] of Object.entries(files)) {
+      zip.file(name, content);
+    }
+    zip.generateAsync({type: "blob"}).then(function(content) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = 'project.zip';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+  }
+
+  renderFileList();
+</script>
 
 </body>
 </html>
